@@ -1,96 +1,204 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="../../favicon.ico">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="../../favicon.ico">
+        <title>Sound Box</title>
+        <link href="bootstrap.css" rel="stylesheet">
+        <style>
+            *, button{
+                outline-offset: 0px!important;
+                outline-style: none;
+                outline-width: 0px!important;
+            }
+        </style>
+    </head>
 
-    <title>Sming Framework with Bootstrap best friends</title>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Sound box</h1>
+            </div>
 
-    <!-- Bootstrap core CSS -->
-    <link href="bootstrap.css" rel="stylesheet">
-	<script src="jquery.js"></script>
-	
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
 
-	<script>
-	$( document ).ready(function() {
-	
-		(function worker() {
-			$.getJSON('ajax/input', function(data) {
-				$.each( data.gpio, function( key, val ) {
-					var target = $('#gpio' + key);
-					target.removeClass("label-default");
-					if (val)
-						target.removeClass("label-danger").addClass("label-success");
-					else
-						target.removeClass("label-success").addClass("label-danger");
-				});
-				setTimeout(worker, 400);
-			});
-		})();
-		
-		$(".switch-freq").click(function() {
-			var freq = $(this).attr('data-value');
-			$.getJSON('ajax/frequency', {value: freq}, function(data) {
-				$("#display-freq").text(data.value);
-			});
-		});
-		
-	});
-	</script>
-  <body>
+            <div class="row marketing">
+                <div class="col-lg-6">
+                    <h3>Volume </h3>
+                    <div>All <input type="range" max="74" min="0" data-channel="0" class="volumeALLCH volume " /></div>
+                    <div>Front Left <input type="range" max="74" min="0" data-channel="1" class="volumeFL volume" /></div>
+                    <div>Front Right <input type="range" max="74" min="0" data-channel="2" class="volumeFR volume" /></div>
+                    <div>Rear Left <input type="range" max="74" min="0" data-channel="3" class="volumeRL volume" /></div>
+                    <div>Rear Right <input type="range" max="74" min="0" data-channel="4" class="volumeRR volume" /></div>
+                    <div>Sub woofer <input type="range" max="74" min="0" data-channel="5" class="volumeSW volume" /></div>
+                    <div>Center <input type="range" max="74" min="0" data-channel="6" class="volumeCEN volume" /></div>
+                </div>
+                <div class="col-lg-6">
+                    <h3> FM Tuner - <span id="freq" >000.0</span>MHz </h3>
+                    <div><input type="range" max="1080" min="920" class="frequency"></div>
+                    <h3> Source </h3>
+                    <div class="btn-group" role="group">
+                        <button type="button" data-source="0" class="btn btn-default source">5.1</button>
+                        <button type="button" data-source="1" class="btn btn-default source">AUX 1</button>
+                        <button type="button" data-source="2" class="btn btn-default source">AUX 2</button>
+                        <button type="button" data-source="3" class="btn btn-default source">AUX 3</button>
+                        <button type="button" data-source="4" class="btn btn-default source">AUX 4</button>
+                    </div>
+                    <h3> State </h3>
+                    <button type="button" class="btn btn-default mixing">Mixing</button>
+                    <button type="button" class="btn btn-default enhance">Enhance</button>
+                    <button type="button" class="btn btn-default mute">Mute</button>
+                    <button type="button" class="btn btn-default backlight">Backlight</button>
+                    <h3> LCD </h3>
+                    <div><input type="text" size="1" ><input type="text"><button>send</button></div>
 
-    <div class="container">
-      <div class="header">
-        <nav>
-          <ul class="nav nav-pills pull-right">
-            <li role="presentation" class="active"><a href="#">Home</a></li>
-            <li role="presentation"><a href="#">About</a></li>
-            <li role="presentation"><a href="#">Contact</a></li>
-          </ul>
-        </nav>
-        <h3 class="text-muted">Sming Framework</h3>
-      </div>
+                </div>
 
-      <div class="jumbotron">
-        <h1>Sming AJAX Example</h1>
-        <p class="lead">Sming: Let's do smart things!
-				</p>
-      </div>
+            </div>
 
-      <div class="row marketing">
-        <div class="col-lg-6">
-          <h3>Reading Input value</h3>
-          <p><span id="gpio0" class="label label-default">GPIO0</span>
-					<p><span id="gpio2" class="label label-default">GPIO2</span>
-        </div>
+            <footer class="footer">
+                <p>&copy; Company 2014</p>
+            </footer>
 
-        <div class="col-lg-6">
-          <h3>Send AJAX Command</h3>
-					<p>Switch CPU frequency</p>
-					<button type="button" class="switch-freq btn btn-info" data-value="80">80 MHz</button>
-					<button type="button" class="switch-freq btn btn-primary" data-value="160">160 MHz</button>
-					<p>&nbsp;
-					<p>Current frequency:</p>
-					<div id="display-freq" class="well well-lg">N/A</div>
-        </div>
-		
-      </div>
-	  
-      <footer class="footer">
-        <p>&copy; Company 2014</p>
-      </footer>
+        </div> <!-- /container -->
 
-    </div> <!-- /container -->
-  </body>
+        <script src="mootools-core.js"></script>
+        <script>
+            window.addEvent('domready', function () {
+
+                var host = '';
+                if (location.hostname == '127.0.0.1') {
+                    host = 'http://192.168.1.26';
+                }
+
+                function sendCommand(url) {
+                    new Request.JSON({
+                        url: url,
+                        onSuccess: function (state) {
+                            console.log(state);
+                        }
+                    }).get();
+                }
+
+
+                function changeVolume(e) {
+                    sendCommand(host + "/volume?channel=" + this.get('data-channel') + '&value=' + this.get('value'));
+                }
+                function changeSource(e) {
+                    document.getElements('.source').removeClass('active');
+                    this.addClass('active');
+                    sendCommand(host + "/source?source=" + this.get('data-source'));
+                }
+
+                function changeTuner() {
+                    sendCommand(host + "/tune?freq=" + this.get('value') / 10);
+                }
+
+                function processState(t) {
+                    var val;
+                    if (t.hasClass('active')) {
+                        t.removeClass('active');
+                        val = 0;
+                    } else {
+                        t.addClass('active');
+                        val = 1;
+
+                    }
+                    return val;
+                }
+
+                function changeBacklight(e) {
+                    sendCommand(host + "/backlight?state=" + processState(this));
+                }
+
+
+                function changeEnhance(e) {
+                    var enc = processState(this);
+                    sendCommand(host + "/extra?state=" + (enc ? 3 : 4));
+                }
+
+                function changeMixing(e) {
+                    var enc = processState(this);
+                    sendCommand(host + "/extra?state=" + (enc ? 1 : 2));
+                }
+                function changeMute(e) {
+                    sendCommand(host + "/mute?value=" + processState(this));
+                }
+
+                new Request.JSON({
+                    url: host + "/state",
+                    onSuccess: function (state) {
+                        Object.each(state, function (val, key) {
+                            var els = document.getElements('.' + key);
+                            console.log(els);
+                            if (els.length == 1) {
+
+                                var el = els[0];
+                                if (el.hasClass('volume')) {
+                                    el.addEvent('change', changeVolume);
+                                    el.set('value', val);
+                                } else if (el.hasClass('mute')) {
+                                    if (val == 1) {
+                                        el.addClass('active');
+                                    }
+                                    el.addEvent('click', changeMute);
+
+                                } else if (el.hasClass('backlight')) {
+
+                                    if (val == 1) {
+                                        el.addClass('active');
+                                    }
+
+                                    el.addEvent('click', changeBacklight);
+
+                                } else if (el.hasClass('mixing')) {
+
+                                    if (val == 1) {
+                                        el.addClass('active');
+                                    }
+
+                                    el.addEvent('click', changeMixing);
+                                } else if (el.hasClass('enhance')) {
+
+                                    if (val == 1) {
+                                        el.addClass('active');
+                                    }
+
+                                    el.addEvent('click', changeEnhance);
+
+                                } else if (el.hasClass('mute')) {
+                                    if (val == 1) {
+                                        el.addClass('active');
+                                    }
+                                    el.addEvent('click', changeMute);
+
+                                } else if (el.hasClass('frequency')) {
+                                    document.id('freq').set('html', val);
+                                    el.set('value', val * 10);
+                                    el.addEvent('change', changeTuner);
+                                    el.addEvent('input', function () {
+                                        document.id('freq').set('html', (this.get('value') / 10).toFixed(1));
+                                    });
+                                }
+                            } else {
+                                if (els.hasClass('source')) {
+                                    els.each(function (el) {
+                                        el.addEvent('click', changeSource);
+                                        if (el.get('data-source') == val) {
+                                            el.addClass('active');
+                                        }
+                                    })
+                                }
+                            }
+                            console.log($('.' + key));
+                        });
+                        console.log(state);
+                    }
+
+
+                }).get();
+            });
+        </script>
+
+    </body>
 </html>
