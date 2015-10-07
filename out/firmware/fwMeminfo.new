@@ -5,11 +5,11 @@ Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
   0 .data         000003c4  3ffe8000  3ffe8000  000000e0  2**4
                   CONTENTS, ALLOC, LOAD, DATA
-  1 .rodata       000022a0  3ffe83c8  3ffe83c8  000004a8  2**3
+  1 .rodata       000022e0  3ffe83c8  3ffe83c8  000004a8  2**3
                   CONTENTS, ALLOC, LOAD, DATA
-  2 .bss          000076c8  3ffea668  3ffea668  00002748  2**4
+  2 .bss          000076c8  3ffea6a8  3ffea6a8  00002788  2**4
                   ALLOC
-  3 .irom0.text   0003c74b  40209000  40209000  00007e60  2**4
+  3 .irom0.text   0003c843  40209000  40209000  00007ea0  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  4 .text         0000570f  40100000  40100000  00002748  2**2
+  4 .text         0000570f  40100000  40100000  00002788  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, CODE

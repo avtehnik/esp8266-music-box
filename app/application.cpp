@@ -3,7 +3,7 @@
 #include <Libraries/LiquidCrystal/LiquidCrystal_I2C.h>
 #include "NtpClientDelegateSystem.h"
 #include <Wire.h>
-
+//music box
 // If you want, you can define WiFi settings globally in Eclipse Environment Variables
 
 #define WIFI_SSID "OpenWrt" // Put you SSID and Password here
@@ -61,13 +61,12 @@ int volumeCEN = 74;
 int volumeSW = 74;
 int volumeALLCH = 74;
 
-int source = 0;
 int mute = 0;
+int mixing = 1;
+int source = 0;
+int enhance = 0;
 int backlight = 0;
 float frequency = 0.0;	
-int mixing = 1;
-int enhance = 0;
-	
 	
 void onIndex(HttpRequest &request, HttpResponse &response)
 {
@@ -182,38 +181,12 @@ void onVolume(HttpRequest &request, HttpResponse &response)
 	response.sendJsonObject(stream);
 }
 
-void onMute(HttpRequest &request, HttpResponse &response)
-{
-	mute = request.getQueryParameter("value").toInt();
-	
-	lcd.setCursor(0,1);
-	
-	if(mute==1){
-		lcd.print("     Mute       ");	
-	    Wire.beginTransmission(PT2323_ADDRESS);
-	  	Wire.write(DEVICE_REG_MODE1);
-	  	Wire.write(0xFF);
-	  	Wire.endTransmission();
-	}else{
-		lcd.print("   Un Mute      ");	
-	    Wire.beginTransmission(PT2323_ADDRESS);
-	  	Wire.write(DEVICE_REG_MODE1);
-	  	Wire.write(0xFE);
-	  	Wire.endTransmission();
-	}
-	
-	
-	JsonObjectStream* stream = new JsonObjectStream();
-	JsonObject& json = stream->getRoot();
-	json["status"] = (bool)true;
-	response.sendJsonObject(stream);
-}
 void onSource(HttpRequest &request, HttpResponse &response)
 {
 	source = request.getQueryParameter("source").toInt();
 	int sourceID = 0;
-    lcd.home ();                   // go home
-    lcd.setCursor(0,0);
+    lcd.home();                   // go home
+	lcd.setCursor(0,1);
 	
 	if( source == 0){
        sourceID = 0xC7;
@@ -253,29 +226,29 @@ void onState(HttpRequest &request, HttpResponse &response)
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
 	
-//	String timeString = SystemClock.getSystemTimeString();
+//		String timeString = 
 	
+	json["time"] = SystemClock.now().toUnixTime();;
+	json["mute"] = mute;
 	json["source"] = source;
-	json["backlight"] = backlight;
 	json["mixing"] = mixing;
 	json["enhance"] = enhance;
-	json["mute"] = mute;
-	json["time"] =  SystemClock.getSystemTimeString().c_str();
 	json["volumeFR"] = 74-volumeFR;
-	json["volumeFL"] = 74-volumeFL;
+	json["volumeFL"] = 74-volumeFL;	
 	json["volumeRR"] = 74-volumeRR;
 	json["volumeRL"] = 74-volumeRL;
 	json["volumeCEN"] = 74-volumeCEN;
 	json["volumeSW"] = 74-volumeSW;
 	json["frequency"] = frequency;
 	json["volumeALLCH"] = 74-volumeALLCH;
+	json["backlight"] = backlight;
 	response.sendJsonObject(stream);
 }
 
 void onBacklight(HttpRequest &request, HttpResponse &response)
 {
 	
-	backlight = request.getQueryParameter("state").toInt();
+	backlight = !backlight;
 	
 	if(backlight==1){
 		lcd.backlight();
@@ -286,39 +259,48 @@ void onBacklight(HttpRequest &request, HttpResponse &response)
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
+	json["state"] = (bool)backlight;
 	response.sendJsonObject(stream);
 }
-void onExtra(HttpRequest &request, HttpResponse &response)
+void onMute(HttpRequest &request, HttpResponse &response)
 {
 	
-	int state = request.getQueryParameter("state").toInt();
-	if(state==1){
-		mixing = 1;
-		lcd.setCursor(0,1);
-		lcd.print("   Mixed ON     ");	
-		Wire.beginTransmission(PT2323_ADDRESS); 
-		Wire.write(DEVICE_REG_MODE1);
-		Wire.write(0x90);
-		Wire.endTransmission();
-	}else if(state==2){
-		mixing = 0;
-		lcd.setCursor(0,1);
-		lcd.print("   Mixed OFF    ");	
-		Wire.beginTransmission(PT2323_ADDRESS); 
-		Wire.write(DEVICE_REG_MODE1);
-		Wire.write(0x91);
-		Wire.endTransmission();
-	}else if(state==3){
-		enhance = 1;
-		lcd.setCursor(0,1);
+	lcd.setCursor(0,1);
+	mute=!mute;
+	if(mute==1){
+		lcd.print("     Mute       ");	
+	    Wire.beginTransmission(PT2323_ADDRESS);
+	  	Wire.write(DEVICE_REG_MODE1);
+	  	Wire.write(0xFF);
+	  	Wire.endTransmission();
+	}else{
+		lcd.print("   Un Mute      ");	
+	    Wire.beginTransmission(PT2323_ADDRESS);
+	  	Wire.write(DEVICE_REG_MODE1);
+	  	Wire.write(0xFE);
+	  	Wire.endTransmission();
+	}
+	
+	
+	JsonObjectStream* stream = new JsonObjectStream();
+	JsonObject& json = stream->getRoot();
+	json["status"] = (bool)true;
+	json["state"] = (bool)mute;
+	response.sendJsonObject(stream);
+}
+void onEnhance(HttpRequest &request, HttpResponse &response)
+{
+	
+	enhance = !enhance;
+	lcd.setCursor(0,1);
+	if(enhance){
 		lcd.print("  Enhanced ON   ");	
 		Wire.beginTransmission(PT2323_ADDRESS); 
 		Wire.write(DEVICE_REG_MODE1);
 		Wire.write(0xD0);
 		Wire.endTransmission();
-	}else if(state==4){
-		enhance = 0;
-		lcd.setCursor(0,1);
+		
+	}else{
 		lcd.print("  Enhanced OFF  ");	
 		Wire.beginTransmission(PT2323_ADDRESS); 
 		Wire.write(DEVICE_REG_MODE1);
@@ -326,13 +308,38 @@ void onExtra(HttpRequest &request, HttpResponse &response)
 		Wire.endTransmission();
 	}
 	
+	JsonObjectStream* stream = new JsonObjectStream();
+	JsonObject& json = stream->getRoot();
+	json["status"] = (bool)true;
+	json["state"] = (bool)enhance;
+	
+	response.sendJsonObject(stream);
+}
+void onMixing(HttpRequest &request, HttpResponse &response)
+{
+	
+	mixing = !mixing;
+	lcd.setCursor(0,1);
+	if(mixing){
+		lcd.print("   Mixed ON     ");	
+		Wire.beginTransmission(PT2323_ADDRESS); 
+		Wire.write(DEVICE_REG_MODE1);
+		Wire.write(0x90);
+		Wire.endTransmission();
+	}else{
+		lcd.print("   Mixed OFF    ");	
+		Wire.beginTransmission(PT2323_ADDRESS); 
+		Wire.write(DEVICE_REG_MODE1);
+		Wire.write(0x91);
+		Wire.endTransmission();
+	}
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
+	json["state"] = (bool)mixing;
 	response.sendJsonObject(stream);
 }
-
 
 
 void onTune(HttpRequest &request, HttpResponse &response)
@@ -358,16 +365,29 @@ void onTune(HttpRequest &request, HttpResponse &response)
 	response.sendJsonObject(stream);
 	
 }
-
+int connectTimeout = 0;
 void onPrintSystemTime() {
 	lcd.setCursor(0,0);
 	lcd.print(SystemClock.getSystemTimeString());	
+	
+	if(!WifiStation.isConnected()){
+		if(connectTimeout>2){
+			lcd.print(" Restarting...  ");	
+			System.restart();
+			connectTimeout = 0;
+		}else{
+			lcd.print("    Offline     ");	
+			
+		}
+	}
 }
 
 
 void onNtpReceive(NtpClient& client, time_t timestamp) {
 	SystemClock.setTime(timestamp);
 	Serial.println(SystemClock.getSystemTimeString());
+	lcd.print("  Got new time  ");	
+	
 }
 
 
@@ -383,7 +403,10 @@ void startWebServer()
 	server.addPath("/state", onState);
 	server.addPath("/backlight", onBacklight);
 	server.addPath("/tune", onTune);
-	server.addPath("/extra", onExtra);
+	server.addPath("/mixing", onMixing);
+	server.addPath("/enhance", onEnhance);
+	
+	
 	
 	server.setDefaultHandler(onFile);
 
@@ -411,6 +434,13 @@ void connectOk()
 }
 
 
+
+
+void connectFail()
+{
+	debugf("I'm NOT CONNECTED!");
+	WifiStation.waitConnection(connectOk, 30, connectFail); // Repeat and check again
+}
 
 void init()
 {
@@ -445,5 +475,5 @@ void init()
 	Wire.endTransmission();
 		
 	// Run our method when station was connected to AP
-	WifiStation.waitConnection(connectOk);
+	WifiStation.waitConnection(connectOk, 30, connectFail);
 }
