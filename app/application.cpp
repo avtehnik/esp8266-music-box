@@ -9,8 +9,6 @@
 #define WIFI_SSID "OpenWrt" // Put you SSID and Password here
 #define WIFI_PWD "testing123"
 
-//#define WIFI_SSID "ekreative" // Put you SSID and Password here
-//#define WIFI_PWD "yabloka346"
 
 #define I2C_LCD_ADDR 0x26
 LiquidCrystal_I2C lcd(I2C_LCD_ADDR, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
