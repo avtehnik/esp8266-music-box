@@ -1,5 +1,5 @@
 #include <user_config.h>
-#include <SmingCore/SmingCore.h>
+#include <SmingCore.h>
 #include <Libraries/LiquidCrystal/LiquidCrystal_I2C.h>
 #include "NtpClientDelegateSystem.h"
 #include <Wire.h>
@@ -9,6 +9,9 @@
 #define WIFI_SSID "OpenWrt" // Put you SSID and Password here
 #define WIFI_PWD "testing123"
 
+#define SERIAL_DEBUG 0   // GPIO2
+
+
 //#define WIFI_SSID "ekreative" // Put you SSID and Password here
 //#define WIFI_PWD "yabloka346"
 
@@ -16,11 +19,12 @@
 LiquidCrystal_I2C lcd(I2C_LCD_ADDR, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 HttpServer server;
-FTPServer ftp;
 void onNtpReceive(NtpClient& client, time_t timestamp);
 
 Timer printTimer;
 ntpClientSystem *clockClient;
+
+int totalActiveSockets = 0;
 
 int PT2323_ADDRESS  = 74;
 int PT2258_ADDRESS  = 68;
@@ -35,8 +39,8 @@ int CHAN_FL   =  1;
 int CHAN_FR   =  2;
 int CHAN_RL   =  3;
 int CHAN_RR   =  4;
-int CHAN_SW   =  5;
-int CHAN_CEN  =  6;
+int CHAN_CEN  =  5;
+int CHAN_SW   =  6;
 
 int PT2258_FL_1DB     =  0x90;
 int PT2258_FL_10DB    =  0x80;
@@ -65,7 +69,8 @@ int mute = 0;
 int mixing = 1;
 int source = 0;
 int enhance = 0;
-int backlight = 0;
+int power = 0;
+
 float frequency = 0.0;	
 	
 void onIndex(HttpRequest &request, HttpResponse &response)
@@ -92,28 +97,34 @@ void onFile(HttpRequest &request, HttpResponse &response)
 }
 
 
+void setLcd(int line, String text){
+	lcd.clear();
+	lcd.setCursor(0,line);
+	lcd.print(text);
+}
+
+
 void onLcd(HttpRequest &request, HttpResponse &response)
 {
-	int x = request.getQueryParameter("x").toInt();
 	int y = request.getQueryParameter("y").toInt();
 	String text = request.getQueryParameter("text");
 	
-	
-	lcd.setCursor(0,y);
-    lcd.print("                ");
-	lcd.setCursor(x,y);
-	lcd.print(text);
+	setLcd(y, text);
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 }
-void onVolume(HttpRequest &request, HttpResponse &response)
-{
-	
-	int channel = request.getQueryParameter("channel").toInt();
-	int value = 74 - request.getQueryParameter("value").toInt();
+
+
+
+void setVolume(int channel, int val){
+
+	int value = 74 - val;
 	int x10 = 0;
     int x1 = 0;
 	
@@ -173,17 +184,31 @@ void onVolume(HttpRequest &request, HttpResponse &response)
   	Wire.write(x10);
   	Wire.endTransmission();
 	
+}
+
+
+void onVolume(HttpRequest &request, HttpResponse &response)
+{
+	
+	int channel = request.getQueryParameter("channel").toInt();
+	int value = request.getQueryParameter("value").toInt();
+	
+	setVolume(channel, value);
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 
 	response.sendJsonObject(stream);
 }
 
-void onSource(HttpRequest &request, HttpResponse &response)
-{
-	source = request.getQueryParameter("source").toInt();
+
+void setSource(int sourc){
+
+	source = sourc;
 	int sourceID = 0;
     lcd.home();                   // go home
 	lcd.setCursor(0,1);
@@ -193,7 +218,7 @@ void onSource(HttpRequest &request, HttpResponse &response)
        lcd.print("     5.1        ");
     }else if( source == 1){
        sourceID =  0xCB;
-       lcd.print("     AUX 2      ");
+       lcd.print("    FM Radio    ");
     }else if( source == 2){
        sourceID =  0xCA;
   	   lcd.print("     AUX 2      ");
@@ -204,16 +229,29 @@ void onSource(HttpRequest &request, HttpResponse &response)
        sourceID = 0xC8;
 	   lcd.print("     AUX 4      ");
     }
-    
-    Wire.beginTransmission(PT2323_ADDRESS);
-  	Wire.write(DEVICE_REG_MODE1);
-  	Wire.write(sourceID);
-  	Wire.endTransmission();
+
+	if(sourceID){
+	    Wire.beginTransmission(PT2323_ADDRESS);
+	  	Wire.write(DEVICE_REG_MODE1);
+	  	Wire.write(sourceID);
+	  	Wire.endTransmission();
+	}
+
+
+}
+
+void onSource(HttpRequest &request, HttpResponse &response)
+{
+	int source = request.getQueryParameter("source").toInt();
+    setSource(source);
     
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
 	json["source"] = source;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 }
 void onState(HttpRequest &request, HttpResponse &response)
@@ -241,33 +279,47 @@ void onState(HttpRequest &request, HttpResponse &response)
 	json["volumeSW"] = 74-volumeSW;
 	json["frequency"] = frequency;
 	json["volumeALLCH"] = 74-volumeALLCH;
-	json["backlight"] = backlight;
+	json["power"] = power;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
+
 	response.sendJsonObject(stream);
 }
 
-void onBacklight(HttpRequest &request, HttpResponse &response)
-{
-	
-	backlight = !backlight;
-	
-	if(backlight==1){
+void setPower(int state){
+	power = state;
+	lcd.setCursor(0,1);
+	if(state==1){
+		lcd.print("   Power ON     ");	
 		lcd.backlight();
 	}else{
+		lcd.print("   Power OFF    ");	
 		lcd.noBacklight();
 	}
+
+}
+
+
+void onPower(HttpRequest &request, HttpResponse &response)
+{
 	
+	setPower(!power);
+
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
-	json["state"] = (bool)backlight;
+	json["state"] = (bool)power;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 }
-void onMute(HttpRequest &request, HttpResponse &response)
-{
-	
+
+void setMmute(int mut){
+	mute=mut;
 	lcd.setCursor(0,1);
-	mute=!mute;
-	if(mute==1){
+	if(mut==1){
 		lcd.print("     Mute       ");	
 	    Wire.beginTransmission(PT2323_ADDRESS);
 	  	Wire.write(DEVICE_REG_MODE1);
@@ -280,18 +332,27 @@ void onMute(HttpRequest &request, HttpResponse &response)
 	  	Wire.write(0xFE);
 	  	Wire.endTransmission();
 	}
+}
+
+void onMute(HttpRequest &request, HttpResponse &response)
+{
+	
+
+	setMmute(!mute);
 	
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
 	json["state"] = (bool)mute;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 }
-void onEnhance(HttpRequest &request, HttpResponse &response)
-{
-	
-	enhance = !enhance;
+
+void setEnhance(int enhanc){
+	enhance = enhanc;
 	lcd.setCursor(0,1);
 	if(enhance){
 		lcd.print("  Enhanced ON   ");	
@@ -307,18 +368,25 @@ void onEnhance(HttpRequest &request, HttpResponse &response)
 		Wire.write(0xD1);
 		Wire.endTransmission();
 	}
-	
+
+}
+
+void onEnhance(HttpRequest &request, HttpResponse &response)
+{
+	setEnhance(!enhance);
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
 	json["state"] = (bool)enhance;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	
 	response.sendJsonObject(stream);
 }
-void onMixing(HttpRequest &request, HttpResponse &response)
-{
-	
-	mixing = !mixing;
+
+void setMixing(int mixin){
+	mixing = mixin;
 	lcd.setCursor(0,1);
 	if(mixing){
 		lcd.print("   Mixed ON     ");	
@@ -333,20 +401,26 @@ void onMixing(HttpRequest &request, HttpResponse &response)
 		Wire.write(0x91);
 		Wire.endTransmission();
 	}
+}
+
+void onMixing(HttpRequest &request, HttpResponse &response)
+{
+	setMixing(!mixing);
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
 	json["state"] = (bool)mixing;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 }
 
 
-void onTune(HttpRequest &request, HttpResponse &response)
-{
-	
-	frequency = request.getQueryParameter("freq").toFloat();
-	
+void setFrequency(float freq){
+
+	frequency = freq;
   	unsigned int frequencyB = 4 * (frequency * 1000000 + 225000) / 32768; 
 	byte frequencyH = frequencyB >> 8;
 	byte frequencyL = frequencyB & 0XFF;
@@ -357,11 +431,21 @@ void onTune(HttpRequest &request, HttpResponse &response)
 	Wire.write(0x10);
 	Wire.write(0x00);
 	Wire.endTransmission();
-	delay(100);  
+
+}
+
+void onTune(HttpRequest &request, HttpResponse &response)
+{
+	
+	
+	setFrequency(request.getQueryParameter("freq").toFloat());
 	
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject& json = stream->getRoot();
 	json["status"] = (bool)true;
+	response.setAllowCrossDomainOrigin("*");
+	response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+	response.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Request, X-Request, X-Requested-With");
 	response.sendJsonObject(stream);
 	
 }
@@ -391,6 +475,122 @@ void onNtpReceive(NtpClient& client, time_t timestamp) {
 }
 
 
+void sendUpdate(){
+	StaticJsonBuffer<300> sendJsonBuffer;
+    JsonObject &json = sendJsonBuffer.createObject();
+    json["type"] = "state";
+    json["count"] = totalActiveSockets;
+	json["time"] = SystemClock.now().toUnixTime();;
+	json["mute"] = mute;
+	json["source"] = source;
+	json["mixing"] = mixing;
+	json["enhance"] = enhance;
+	json["volumeFR"] = 74-volumeFR;
+	json["volumeFL"] = 74-volumeFL;	
+	json["volumeRR"] = 74-volumeRR;
+	json["volumeRL"] = 74-volumeRL;
+	json["volumeCEN"] = 74-volumeCEN;
+	json["volumeSW"] = 74-volumeSW;
+	json["frequency"] = frequency;
+	json["volumeALLCH"] = 74-volumeALLCH;
+	json["power"] = power;
+
+
+	String jsonString;
+	json.printTo(jsonString);
+
+	WebSocketsList &clients = server.getActiveWebSockets();
+	for (int i = 0; i < clients.count(); i++){
+		clients[i].sendString(jsonString);
+	}
+
+}
+
+void wsConnected(WebSocket& socket)
+{
+	totalActiveSockets++;
+	sendUpdate();
+}
+
+
+void wsMessageReceived(WebSocket& socket, const String& message)
+{
+	WebSocketsList &clients = server.getActiveWebSockets();
+
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& root = jsonBuffer.parseObject(message);
+    String actionName  = root["name"].asString();
+ 
+    if(actionName=="enhance"){
+    	setEnhance(!enhance);
+    }else if(actionName=="power"){
+    	setPower(!power);
+    }else if(actionName=="mute"){
+    	setMmute(!mute);
+    }else if(actionName=="mixing"){
+    	setMixing(!mixing);
+    }else if(actionName=="frequency"){
+		setFrequency(root["val"]);
+    }else if(actionName=="source"){
+		setSource(root["val"]);
+    }else if (actionName == "volumeFR") {
+        setVolume(CHAN_FR, root["val"]);
+    } else if (actionName == "volumeFL") {
+        setVolume(CHAN_FL, root["val"]);
+    } else if (actionName == "volumeRR") {
+        setVolume(CHAN_RR, root["val"]);
+    } else if (actionName == "volumeRL") {
+        setVolume(CHAN_RL, root["val"]);
+    } else if (actionName == "volumeCEN") {
+        setVolume(CHAN_CEN, root["val"]);
+    } else if (actionName == "volumeSW") {
+        setVolume(CHAN_SW, root["val"]);
+    } else if (actionName == "volumeALLCH") {
+        setVolume(CHAN_ALL, root["val"]);
+    } else if (actionName == "volumeSW") {
+        setVolume(CHAN_SW, root["val"]);
+    } else if (actionName == "lcdText") {
+        setLcd(root["line"], root["val"]);
+    }
+
+
+
+
+
+	sendUpdate();
+	Serial.printf("WebSocket message received:\r\n%s\r\n", actionName);
+}
+
+void wsBinaryReceived(WebSocket& socket, uint8_t* data, size_t size)
+{
+	if(SERIAL_DEBUG)Serial.printf("Websocket binary data recieved, size: %d\r\n", size);
+}
+
+void wsDisconnected(WebSocket& socket)
+{
+
+	totalActiveSockets--;
+}
+
+
+
+
+
+void startmDNS() {
+
+struct mdns_info info;
+
+ struct ip_info ipconfig;
+ wifi_get_ip_info(STATION_IF, &ipconfig);
+ info.host_name = (char*)"music";
+info.ipAddr = ipconfig.ip.addr; //ESP8266 station IP
+info.server_name = (char*)"iot";
+info.server_port = 80;
+info.txt_data[0] = (char*)"version = now";
+info.txt_data[1] = (char*)"user1 = data1";
+info.txt_data[2] = (char*)"user2 = data2";
+espconn_mdns_init(&info);
+}
 
 void startWebServer()
 {
@@ -401,12 +601,18 @@ void startWebServer()
 	server.addPath("/mute", onMute);
 	server.addPath("/source", onSource);
 	server.addPath("/state", onState);
-	server.addPath("/backlight", onBacklight);
+	server.addPath("/power", onPower);
 	server.addPath("/tune", onTune);
 	server.addPath("/mixing", onMixing);
 	server.addPath("/enhance", onEnhance);
 	
-	
+		// Web Sockets configuration
+	server.enableWebSockets(true);
+	server.setWebSocketConnectionHandler(wsConnected);
+	server.setWebSocketMessageHandler(wsMessageReceived);
+	server.setWebSocketBinaryHandler(wsBinaryReceived);
+	server.setWebSocketDisconnectionHandler(wsDisconnected);
+
 	
 	server.setDefaultHandler(onFile);
 
@@ -417,20 +623,15 @@ void startWebServer()
 	lcd.print(WifiStation.getIP());
 }
 
-void startFTP()
-{
-	if (!fileExist("index.html"))
-		fileSetContent("index.html", "<h3>Please connect to FTP and upload files from folder 'web/build' (details in code)</h3>");
-	ftp.listen(21);
-	ftp.addUser("me", "123"); // FTP account
-}
 
+ 
 void connectOk()
 {
+	startmDNS();
+
 	Serial.println("I'm CONNECTED");
-	clockClient = new ntpClientSystem();
-	startFTP();
 	startWebServer();
+	clockClient = new ntpClientSystem();
 }
 
 
@@ -444,6 +645,12 @@ void connectFail()
 
 void init()
 {
+
+	spiffs_mount(); 
+	Serial.begin(230400); // 115200 by default
+
+	Serial.systemDebugOutput(false); // Enable debug output to serial
+
 	Wire.begin();	
 	lcd.begin(16,2);               // initialize the lcd 
 
