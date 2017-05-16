@@ -1,5 +1,8 @@
 # esp8266 music box
 Wifi sound system controlled by esp8266 based on PT2323 + PT2258 + tea5767 + 1602 LCD
+Used sming framework
+
+Old video with native ios app, today it just web page on esp
 
 https://www.youtube.com/watch?v=cVvAX_ywm8w
 
